@@ -7,7 +7,6 @@ Requires:
     AWS credentials configured (env vars, ~/.aws/credentials, or IAM role)
 """
 
-import time
 from decimal import Decimal
 
 import boto3
@@ -55,7 +54,7 @@ def decimal_to_float(obj):
 
 def fetch_room_data(room_id: str, limit: int = 100) -> pd.DataFrame:
     try:
-        # Only fetch data from the last 30 minutes
+        table = get_table()  # ← this line added
         cutoff = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
 
         resp = table.query(
