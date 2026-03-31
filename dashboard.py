@@ -29,10 +29,13 @@ st.set_page_config(
 
 @st.cache_resource
 def get_table():
-    dynamodb = boto3.resource("dynamodb", region_name="eu-north-1")
+    dynamodb = boto3.resource(
+        "dynamodb",
+        region_name=st.secrets["aws"]["AWS_DEFAULT_REGION"],
+        aws_access_key_id=st.secrets["aws"]["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=st.secrets["aws"]["AWS_SECRET_ACCESS_KEY"],
+    )
     return dynamodb.Table("CloudComfortTable")
-
-table = get_table()
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
