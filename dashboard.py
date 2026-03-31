@@ -172,14 +172,18 @@ st.caption(f"Room: **{room}** · Last {limit} readings · Auto-refresh every {re
 st_autorefresh(interval=refresh_secs * 1000, key="refresh")
 
 df = fetch_room_data(room, limit)
-
-if df.empty:
-    st.info("No data yet for this room. Start the simulator and check back soon.")
-else:
-    latest = df.iloc[-1]
-    ci_val = float(latest.get("ci", 0))
-    ci_lbl = latest.get("ci_label", "—")
-    icon   = ci_colour(ci_val)
+st.write("DEBUG — rows fetched:", len(df))
+if not df.empty:
+    st.write("Latest timestamp:", df["timestamp"].max())
+    st.write("Earliest timestamp:", df["timestamp"].min())
+    
+#if df.empty:
+#   st.info("No data yet for this room. Start the simulator and check back soon.")
+#else:
+#    latest = df.iloc[-1]
+#    ci_val = float(latest.get("ci", 0))
+#    ci_lbl = latest.get("ci_label", "—")
+#    icon   = ci_colour(ci_val)*
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     col1.metric("Comfort Index", f"{icon} {ci_val:.1f}")
