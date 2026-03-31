@@ -96,21 +96,26 @@ def call_control(action: str) -> dict:
             Payload=json.dumps({"body": json.dumps({"action": action})}),
         )
 
-        # Check for Lambda-level errors (timeout, out of memory, unhandled exception)
         if "FunctionError" in response:
             raw = json.loads(response["Payload"].read())
             return {"error": raw.get("errorMessage", "Lambda function error")}
 
         payload = json.loads(response["Payload"].read())
 
-        # API Gateway-style response: body is a JSON string
+        # Unwrap API Gateway-style response
         body = payload.get("body", "{}")
-        if isinstance(body, str):
-            return json.loads(body)
-        elif isinstance(body, dict):
-            return body  # already parsed, return as-is
-        else:
-            return {"error": f"Unexpected body type: {type(body).__name__}"}
+
+        # Keep parsing until we have a dict (handles double/triple encoding)
+        for _ in range(3):
+            if isinstance(body, dict):
+                return body
+            if isinstance(body, str):
+                try:
+                    body = json.loads(body)
+                except json.JSONDecodeError:
+                    return {"error": f"Could not parse body: {body}"}
+        
+        return {"error": f"Unexpected body type after parsing: {type(body).__name__}"}
 
     except Exception as e:
         return {"error": str(e)}
@@ -118,10 +123,10 @@ def call_control(action: str) -> dict:
 def get_simulator_status() -> str:
     result = call_control("status")
     if not isinstance(result, dict):
-        st.sidebar.warning(f"Unexpected response from control Lambda: {result}")
+        st.sidebar.warning(f"Unexpected response type: {type(result).__name__} — {result}")
         return "stopped"
     if "error" in result:
-        st.sidebar.warning(f"Could not fetch simulator status: {result['error']}")
+        st.sidebar.warning(f"Status check failed: {result['error']}")
         return "stopped"
     return result.get("status", "stopped")
 
