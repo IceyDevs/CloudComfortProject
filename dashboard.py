@@ -89,20 +89,40 @@ def ci_colour(ci: float) -> str:
 def call_control(action: str) -> dict:
     import json
     try:
-        client   = get_lambda_client()
+        client = get_lambda_client()
         response = client.invoke(
             FunctionName="CloudComfortSimulatorControl",
             InvocationType="RequestResponse",
             Payload=json.dumps({"body": json.dumps({"action": action})}),
         )
+
+        # Check for Lambda-level errors (timeout, out of memory, unhandled exception)
+        if "FunctionError" in response:
+            raw = json.loads(response["Payload"].read())
+            return {"error": raw.get("errorMessage", "Lambda function error")}
+
         payload = json.loads(response["Payload"].read())
-        body    = json.loads(payload.get("body", "{}"))
-        return body
+
+        # API Gateway-style response: body is a JSON string
+        body = payload.get("body", "{}")
+        if isinstance(body, str):
+            return json.loads(body)
+        elif isinstance(body, dict):
+            return body  # already parsed, return as-is
+        else:
+            return {"error": f"Unexpected body type: {type(body).__name__}"}
+
     except Exception as e:
         return {"error": str(e)}
 
 def get_simulator_status() -> str:
     result = call_control("status")
+    if not isinstance(result, dict):
+        st.sidebar.warning(f"Unexpected response from control Lambda: {result}")
+        return "stopped"
+    if "error" in result:
+        st.sidebar.warning(f"Could not fetch simulator status: {result['error']}")
+        return "stopped"
     return result.get("status", "stopped")
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
